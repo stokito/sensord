@@ -1,21 +1,6 @@
-CREATE DATABASE sensors;
-
 CREATE SCHEMA sensors;
 
 SET search_path TO sensors;
-
-CREATE TABLE measurements
-(
-    measure_time TIMESTAMP NOT NULL,
-    sensor_id    INT       NOT NULL REFERENCES sensors(id),
-    value        DOUBLE PRECISION
-);
-
-CREATE INDEX idx_measurements
-    ON measurements (measure_time, sensor_id)
-    INCLUDE (value);
-
-
 
 CREATE TABLE sensors
 (
@@ -26,3 +11,14 @@ CREATE TABLE sensors
     props JSONB
 );
 
+
+CREATE TABLE measurements
+(
+    measure_time TIMESTAMP NOT NULL,
+    sensor_id    INT       NOT NULL REFERENCES sensors(id),
+    value        DOUBLE PRECISION
+);
+
+CREATE UNIQUE INDEX idx_measurements
+    ON measurements (measure_time, sensor_id)
+    INCLUDE (value);

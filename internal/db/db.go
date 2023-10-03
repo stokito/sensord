@@ -15,9 +15,15 @@ var db *pgxpool.Pool
 
 // language=PostgreSQL
 var sqlMeasureInsert = `INSERT INTO measurements (
-	sensor_id, measure_time, value) 
+	measure_time, sensor_id, value) 
 	VALUES ($1, $2, $3)
-	ON CONFLICT (sensor_id, measure_time) DO NOTHING;
+	ON CONFLICT (measure_time, sensor_id) DO NOTHING;
+`
+
+// language=PostgreSQL
+var sqlCreateSensor = `INSERT INTO sensors (
+	id, name, room) 
+	VALUES ($1, $2, $3);
 `
 
 // DbLog logger for SQL queries
@@ -53,10 +59,18 @@ func DbClose() {
 	log.Printf("INFO: DB disconnected\n")
 }
 
-func StoreMeasureToDb(ctx context.Context, sensorId, measureTime time.Time, value float64) {
+func StoreMeasureToDb(ctx context.Context, measureTime time.Time, sensorId int, value float64) {
 	_, sqlErr := db.Exec(ctx, sqlMeasureInsert,
-		sensorId, measureTime, value)
+		measureTime, sensorId, value)
 	if sqlErr != nil {
 		log.Printf("WARN: Fail to insert measure %v\n", sqlErr)
+	}
+}
+
+func CreateSensor(ctx context.Context, sensorId int, name, room string) {
+	_, sqlErr := db.Exec(ctx, sqlCreateSensor,
+		sensorId, name, room)
+	if sqlErr != nil {
+		log.Printf("WARN: Fail to insert new sensor %v\n", sqlErr)
 	}
 }

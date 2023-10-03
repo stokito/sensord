@@ -12,15 +12,18 @@ import (
 func Test_Db(t *testing.T) {
 	ctx := context.Background()
 	config.LoadConfig()
-	dbErr := DbConnect(ctx)
+
+	dbConn := NewPostgresDb(config.Conf.DatabaseUrl, config.Conf.DatabaseLog)
+	dbErr := dbConn.Connect(ctx)
 	if !assert.NoError(t, dbErr) {
 		return
 	}
-	defer DbClose()
+	defer dbConn.Close()
 
-	CreateSensor(ctx, 1, "Sensor1", "Room1")
+	dbConn.CreateSensor(ctx, 1, "Sensor1", "Room1")
 	measureTime := time.Now()
 	sensorId := 1
 	measureValue := 42.0
-	StoreMeasureToDb(ctx, measureTime, sensorId, measureValue)
+	dbConn.StoreMeasureToDb(ctx, measureTime, sensorId, measureValue)
+	dbConn.Cleanup(ctx)
 }

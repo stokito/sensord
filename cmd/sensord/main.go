@@ -23,15 +23,16 @@ func run() error {
 
 	log.Printf("INFO: Running Sensor Daemon on %s\n", config.Conf.ApiListenHttp)
 
-	dbErr := db.DbConnect(ctx)
+	dbConn := db.NewPostgresDb(config.Conf.DatabaseUrl, config.Conf.DatabaseLog)
+	dbErr := dbConn.Connect(ctx)
 	if dbErr != nil {
 		log.Fatal("CRIT: Unable to connect to database: " + dbErr.Error())
 	}
-	log.Printf("INFO: Connected to database\n")
+	defer dbConn.Close()
 
 	<-ctx.Done()
-	stop()
-	db.DbClose()
 	log.Println("INFO: Gracefully shutting down")
+	stop()
+	dbConn.Close()
 	return nil
 }

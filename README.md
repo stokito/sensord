@@ -40,3 +40,6 @@ We need to store measurements in aggregated form.
 
 You need to configure environment variables:
 * `LISTEN_HTTP` daemon listen address for HTTP API
+* `DB_URL` daemon listen address for HTTP API
+* `DB_LOG` if `true` then log SQL queries. 
+

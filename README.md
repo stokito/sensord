@@ -34,3 +34,9 @@ But for a simplicity I will use a PostgreSQL which is a swiss army knife of DBs.
 For the best performance I will use FastHttp library which is designed to have minimal memory allocations.
 
 We need to store measurements in aggregated form.
+
+
+## Configuration
+
+You need to configure environment variables:
+* `LISTEN_HTTP` daemon listen address for HTTP API

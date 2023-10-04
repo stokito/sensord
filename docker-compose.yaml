@@ -24,6 +24,11 @@ services:
       db:
         condition: service_healthy
     image: sensord:latest
+    environment:
+      - DB_URL=postgres://postgres:postgres@db:5432/sensorsdb?sslmode=disable&search_path=sensors
+      - DB_LOG=true
+      - SENSOR_LISTEN_HTTP=:8080
+      - ADMIN_LISTEN_HTTP=:9090
     ports:
       - '8080:8080'
       - '9090:9090'

@@ -97,7 +97,7 @@ curl -X POST --location "http://localhost:8080/api/v1/measurement" \
 -H "Content-Type: application/json" \
 -d "{
 \"sensorId\": 1,
-\"time\": \"2023-01-02T00:00:00.000Z\",
+\"time\": \"2023-10-03T00:00:00.000Z\",
 \"value\": 42
 }"
 ```

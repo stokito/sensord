@@ -1,7 +1,7 @@
 FROM golang:1.21 AS builder
 WORKDIR /src/
 COPY ./ ./
-RUN go build -o ./build/sensord ./cmd/sensord/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -o ./build/sensord ./cmd/sensord/main.go
 
 FROM alpine
 WORKDIR /opt/

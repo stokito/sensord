@@ -123,6 +123,7 @@ SELECT
 	MAX(max_value) AS max_value
 FROM measurement
 WHERE measurement_day >= $1 AND measurement_day < $2
+HAVING COUNT(*) > 0 -- remove records with all NULL
 `,
 		periodStart, periodEnd)
 
@@ -133,6 +134,10 @@ WHERE measurement_day >= $1 AND measurement_day < $2
 	}
 	scanErr := row.Scan(&measurement.TotalCount, &measurement.TotalSum,
 		&measurement.AvgValue, &measurement.MinValue, &measurement.MaxValue)
+
+	if scanErr == pgx.ErrNoRows {
+		return measurement, nil
+	}
 	if scanErr != nil {
 		log.Printf("ERROR: scan error %v\n", scanErr)
 		return nil, scanErr
@@ -143,7 +148,7 @@ WHERE measurement_day >= $1 AND measurement_day < $2
 // GetMeasurementPeriodStatsForEachSensor returns a stats for a period e.g. day, week.
 // If no any measurements exists for the day then all counters will be zero.
 func (db *PostgresDb) GetMeasurementPeriodStatsForEachSensor(ctx context.Context, periodStart, periodEnd time.Time) ([]*MeasurementRec, error) {
-	stats := []*MeasurementRec(nil)
+	stats := []*MeasurementRec{}
 
 	rows, sqlErr := db.pool.Query(ctx, `
 SELECT
@@ -184,7 +189,7 @@ ORDER BY sensor_id
 // GetMeasurementPeriodStatsForEachSensorAndDay returns a stats for a period e.g. day, week.
 // If no any measurements exists for the day then all counters will be zero.
 func (db *PostgresDb) GetMeasurementPeriodStatsForEachSensorAndDay(ctx context.Context, periodStart, periodEnd time.Time) ([]*MeasurementRec, error) {
-	stats := []*MeasurementRec(nil)
+	stats := []*MeasurementRec{}
 
 	rows, sqlErr := db.pool.Query(ctx, `
 SELECT

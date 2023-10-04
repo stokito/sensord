@@ -5,9 +5,10 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"sensord/internal/api"
+	"sensord/internal/admin_api"
 	"sensord/internal/core"
 	"sensord/internal/db"
+	"sensord/internal/sensor_api"
 )
 
 func main() {
@@ -22,7 +23,7 @@ func run() error {
 
 	conf := core.LoadConfig()
 
-	log.Printf("INFO: Running Sensor Daemon on %s\n", conf.ApiListenHttp)
+	log.Printf("INFO: Running Sensor Daemon on %s\n", conf.SensorApiListenHttp)
 
 	storage := db.NewPostgresDb(conf.DatabaseUrl, conf.DatabaseLog)
 	dbErr := storage.Connect(ctx)
@@ -31,8 +32,11 @@ func run() error {
 	}
 	defer storage.Close()
 
-	apiServ := api.NewApiServer(conf.ApiListenHttp, storage)
-	go apiServ.Start()
+	sensorApiServ := sensor_api.NewSensorApiServer(conf.SensorApiListenHttp, storage)
+	go sensorApiServ.Start()
+
+	adminApiServ := admin_api.NewAdminApiServer(conf.AdminApiListenHttp, storage)
+	go adminApiServ.Start()
 
 	<-ctx.Done()
 	log.Println("INFO: Gracefully shutting down")

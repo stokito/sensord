@@ -1,8 +1,19 @@
+### Record measurement
 POST http://localhost:8080/api/v1/measurement
 Content-Type: application/json
 
 {
   "sensorId": 0,
-  "time": "2023-01-01T00:00:00.000Z",
+  "time": "2023-01-02T00:00:00.000Z",
   "value": 0
 }
+
+
+### Total
+GET http://localhost:9090/api/v1/stats/Total
+
+### EachSensor
+GET http://localhost:9090/api/v1/stats/EachSensor
+
+### EachSensorAndDay
+GET http://localhost:9090/api/v1/stats/EachSensorAndDay

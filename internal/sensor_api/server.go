@@ -1,4 +1,4 @@
-package api
+package sensor_api
 
 import (
 	"bytes"
@@ -16,7 +16,7 @@ type ApiServer struct {
 	listenAddr string
 }
 
-func NewApiServer(ListenAddr string, storage db.SensorsDb) *ApiServer {
+func NewSensorApiServer(ListenAddr string, storage db.SensorsDb) *ApiServer {
 	return &ApiServer{
 		listenAddr: ListenAddr,
 		storage:    storage,

@@ -64,7 +64,7 @@ func (db *PostgresDb) Close() {
 func (db *PostgresDb) Cleanup(ctx context.Context) {
 	_, sqlErr := db.pool.Exec(ctx, `TRUNCATE measurement`)
 	if sqlErr != nil {
-		log.Printf("WARN: Fail to cleanup %v\n", sqlErr)
+		log.Printf("ERROR: Fail to cleanup %v\n", sqlErr)
 	}
 }
 
@@ -86,7 +86,7 @@ WHERE measurement.measurement_day = $1 AND measurement.sensor_id = $2
 `,
 		day, sensorId, value)
 	if sqlErr != nil {
-		log.Printf("WARN: Fail to insert measure %v\n", sqlErr)
+		log.Printf("ERROR: Fail to insert measure %v\n", sqlErr)
 	}
 }
 
@@ -94,21 +94,129 @@ WHERE measurement.measurement_day = $1 AND measurement.sensor_id = $2
 // If no any measurements exists for the day then all counters will be zero.
 func (db *PostgresDb) GetMeasurementStatsForDay(ctx context.Context, day time.Time, sensorId int) (*MeasurementRec, error) {
 	row := db.pool.QueryRow(ctx, `
-SELECT measurement_day, sensor_id, total_count, total_sum, avg_value, min_value, max_value
+SELECT total_count, total_sum, avg_value, min_value, max_value
 FROM measurement
 WHERE measurement_day = $1 AND sensor_id = $2`,
 		day, sensorId)
 
 	measurement := &MeasurementRec{}
-	sqlErr := row.Scan(&measurement.Day, &measurement.SensorId, &measurement.TotalCount, &measurement.TotalSum,
+	sqlErr := row.Scan(&measurement.TotalCount, &measurement.TotalSum,
 		&measurement.AvgValue, &measurement.MinValue, &measurement.MaxValue)
 	if sqlErr == pgx.ErrNoRows {
-		measurement.Day = day
-		measurement.SensorId = sensorId
 		return measurement, nil
 	}
 	if sqlErr != nil {
 		return nil, sqlErr
 	}
 	return measurement, nil
+}
+
+// GetMeasurementPeriodStatsTotal returns a stats for a period e.g. day, week.
+// If no any measurements exists for the day then all counters will be zero.
+func (db *PostgresDb) GetMeasurementPeriodStatsTotal(ctx context.Context, periodStart, periodEnd time.Time) (*MeasurementRec, error) {
+	row := db.pool.QueryRow(ctx, `
+SELECT
+	SUM(total_count) AS total_count,
+	SUM(total_sum) AS total_sum,
+	SUM(total_sum) / SUM(total_count) AS avg_value,
+	MIN(min_value) AS min_value,
+	MAX(max_value) AS max_value
+FROM measurement
+WHERE measurement_day >= $1 AND measurement_day < $2
+`,
+		periodStart, periodEnd)
+
+	measurement := &MeasurementRec{
+		PeriodStart: periodStart,
+		PeriodEnd:   periodEnd,
+		SensorId:    0,
+	}
+	scanErr := row.Scan(&measurement.TotalCount, &measurement.TotalSum,
+		&measurement.AvgValue, &measurement.MinValue, &measurement.MaxValue)
+	if scanErr != nil {
+		log.Printf("ERROR: scan error %v\n", scanErr)
+		return nil, scanErr
+	}
+	return measurement, nil
+}
+
+// GetMeasurementPeriodStatsForEachSensor returns a stats for a period e.g. day, week.
+// If no any measurements exists for the day then all counters will be zero.
+func (db *PostgresDb) GetMeasurementPeriodStatsForEachSensor(ctx context.Context, periodStart, periodEnd time.Time) ([]*MeasurementRec, error) {
+	stats := []*MeasurementRec(nil)
+
+	rows, sqlErr := db.pool.Query(ctx, `
+SELECT
+	sensor_id,
+	SUM(total_count) AS total_count,
+	SUM(total_sum) AS total_sum,
+	SUM(total_sum) / SUM(total_count) AS avg_value,
+	MIN(min_value) AS min_value,
+	MAX(max_value) AS max_value
+FROM measurement
+WHERE measurement_day >= $1 AND measurement_day < $2
+GROUP BY sensor_id
+ORDER BY sensor_id
+`,
+		periodStart, periodEnd)
+
+	if sqlErr != nil {
+		return nil, sqlErr
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		measurement := &MeasurementRec{
+			PeriodStart: periodStart,
+			PeriodEnd:   periodEnd,
+		}
+		scanErr := rows.Scan(&measurement.SensorId, &measurement.TotalCount, &measurement.TotalSum,
+			&measurement.AvgValue, &measurement.MinValue, &measurement.MaxValue)
+		if scanErr != nil {
+			log.Printf("ERROR: scan error %v\n", scanErr)
+			continue
+		}
+		stats = append(stats, measurement)
+	}
+	return stats, nil
+}
+
+// GetMeasurementPeriodStatsForEachSensorAndDay returns a stats for a period e.g. day, week.
+// If no any measurements exists for the day then all counters will be zero.
+func (db *PostgresDb) GetMeasurementPeriodStatsForEachSensorAndDay(ctx context.Context, periodStart, periodEnd time.Time) ([]*MeasurementRec, error) {
+	stats := []*MeasurementRec(nil)
+
+	rows, sqlErr := db.pool.Query(ctx, `
+SELECT
+	sensor_id,
+	measurement_day,
+	SUM(total_count) AS total_count,
+	SUM(total_sum) AS total_sum,
+	SUM(total_sum) / SUM(total_count) AS avg_value,
+	MIN(min_value) AS min_value,
+	MAX(max_value) AS max_value
+FROM measurement
+WHERE measurement_day >= $1 AND measurement_day < $2
+GROUP BY sensor_id, measurement_day
+ORDER BY sensor_id, measurement_day
+`,
+		periodStart, periodEnd)
+
+	if sqlErr != nil {
+		return nil, sqlErr
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		measurement := &MeasurementRec{}
+		scanErr := rows.Scan(&measurement.SensorId, &measurement.PeriodStart, &measurement.TotalCount, &measurement.TotalSum,
+			&measurement.AvgValue, &measurement.MinValue, &measurement.MaxValue)
+		if scanErr != nil {
+			log.Printf("ERROR: scan error %v\n", scanErr)
+			continue
+		}
+		measurement.PeriodEnd = measurement.PeriodStart.AddDate(0, 0, 1)
+		stats = append(stats, measurement)
+	}
+	return stats, nil
 }

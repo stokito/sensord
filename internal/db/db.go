@@ -10,6 +10,6 @@ type SensorsDb interface {
 	Connect(ctx context.Context) error
 	Close()
 	CreateSensor(ctx context.Context, sensorId int, name, room string)
-	StoreMeasureToDb(ctx context.Context, measureTime time.Time, sensorId int, value float64)
+	StoreMeasurement(ctx context.Context, measureTime time.Time, sensorId int, value float64)
 	Cleanup(ctx context.Context)
 }

@@ -24,6 +24,6 @@ func Test_Db(t *testing.T) {
 	measureTime := time.Now()
 	sensorId := 1
 	measureValue := 42.0
-	dbConn.StoreMeasureToDb(ctx, measureTime, sensorId, measureValue)
+	dbConn.StoreMeasurement(ctx, measureTime, sensorId, measureValue)
 	dbConn.Cleanup(ctx)
 }

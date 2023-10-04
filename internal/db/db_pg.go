@@ -10,8 +10,8 @@ import (
 )
 
 // language=PostgreSQL
-var sqlMeasureInsert = `
-INSERT INTO measurements (
+var sqlMeasurementInsert = `
+INSERT INTO measurement (
 	measure_time, sensor_id, value) 
 VALUES ($1, $2, $3)
 ON CONFLICT (measure_time, sensor_id) DO NOTHING;
@@ -86,8 +86,8 @@ func (db *PostgresDb) CreateSensor(ctx context.Context, sensorId int, name, room
 	}
 }
 
-func (db *PostgresDb) StoreMeasureToDb(ctx context.Context, measureTime time.Time, sensorId int, value float64) {
-	_, sqlErr := db.pool.Exec(ctx, sqlMeasureInsert,
+func (db *PostgresDb) StoreMeasurement(ctx context.Context, measureTime time.Time, sensorId int, value float64) {
+	_, sqlErr := db.pool.Exec(ctx, sqlMeasurementInsert,
 		measureTime, sensorId, value)
 	if sqlErr != nil {
 		log.Printf("WARN: Fail to insert measure %v\n", sqlErr)

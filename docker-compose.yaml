@@ -18,3 +18,15 @@ services:
     volumes:
 #      - db:/var/lib/postgresql/data
       - ./migration/init.sql:/docker-entrypoint-initdb.d/init.sql
+  sensord:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    image: sensord:latest
+    ports:
+      - '8080:8080'
+      - '9090:9090'
+volumes:
+  db:
+    driver: local

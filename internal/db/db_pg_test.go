@@ -55,12 +55,11 @@ func TestMain(m *testing.M) {
 		return
 	}
 	testDir := filepath.Dir(path)
+	// if the test executing directly then we need to roll to upper folder
 	if strings.HasSuffix(testDir, "internal/db") {
 		testDir, _ = strings.CutSuffix(testDir, "internal/db")
 	}
 	pathToMigrationFiles := "file://" + testDir + "migration"
-
-	// ^([0-9]+)_(.*)\.(down|up)\.(.*)$
 
 	migration, err := migrate.New(pathToMigrationFiles, databaseUrl)
 	if err != nil {
@@ -77,7 +76,8 @@ func TestMain(m *testing.M) {
 
 	log.Println("migration done")
 
-	storage = NewPostgresDb(databaseUrl+"&search_path=sensors", true)
+	databaseUrlAndSchema := databaseUrl + "&search_path=sensors"
+	storage = NewPostgresDb(databaseUrlAndSchema, true)
 	dbErr := storage.Connect(ctx)
 	if dbErr != nil {
 		fmt.Printf("Connection error: %s\n", dbErr)

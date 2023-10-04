@@ -3,7 +3,7 @@ CREATE SCHEMA sensors;
 SET
     search_path TO sensors;
 
-
+-- sensor measurements aggregated by day
 CREATE TABLE measurement
 (
     measurement_day DATE             NOT NULL,

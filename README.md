@@ -39,7 +39,8 @@ We need to store measurements in aggregated form.
 ## Configuration
 
 You need to configure environment variables:
-* `LISTEN_HTTP` daemon listen address for HTTP API
-* `DB_URL` daemon listen address for HTTP API
+* `SENSOR_LISTEN_HTTP` Sensor HTTP API listen address. You can specify `hostname:port` or just `:port`
+* `ADMIN_LISTEN_HTTP` Admin HTTP API listen address
+* `DB_URL` PostgreSQL database URL 
 * `DB_LOG` if `true` then log SQL queries. 
 

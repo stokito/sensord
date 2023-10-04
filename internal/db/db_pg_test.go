@@ -2,10 +2,20 @@ package db
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/stretchr/testify/assert"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/wait"
+	"log"
 	"os"
-	"sensord/internal/core"
+	"path/filepath"
+	"runtime"
 	"sensord/internal/models"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -22,20 +32,97 @@ var day8 = time.Date(2023, 1, 8, 0, 0, 0, 0, utc)
 
 var storage SensorsDb
 
+const (
+	DbName = "test_db"
+	DbUser = "test_user"
+	DbPass = "test_password"
+	DbUrl  = "postgres://test_user:test_password@localhost:%s/test_db?sslmode=disable"
+)
+
 func TestMain(m *testing.M) {
 	ctx := context.Background()
-	conf := core.LoadConfig()
 
-	storage = NewPostgresDb(conf.DatabaseUrl, conf.DatabaseLog)
-	//dbConn = postgresDb
+	databaseUrl, container := startPostgreSqlContainer(ctx)
+	if databaseUrl == "" {
+		return
+	}
+	// remove test container
+	defer container.Terminate(context.Background())
+
+	// get location of test
+	_, path, _, ok := runtime.Caller(0)
+	if !ok {
+		return
+	}
+	testDir := filepath.Dir(path)
+	if strings.HasSuffix(testDir, "internal/db") {
+		testDir, _ = strings.CutSuffix(testDir, "internal/db")
+	}
+	pathToMigrationFiles := "file://" + testDir + "migration"
+
+	// ^([0-9]+)_(.*)\.(down|up)\.(.*)$
+
+	migration, err := migrate.New(pathToMigrationFiles, databaseUrl)
+	if err != nil {
+		fmt.Printf("Error: %s\n", err)
+		return
+	}
+	defer migration.Close()
+
+	err = migration.Up()
+	if err != nil && !errors.Is(err, migrate.ErrNoChange) {
+		fmt.Printf("Error: %s\n", err)
+		return
+	}
+
+	log.Println("migration done")
+
+	storage = NewPostgresDb(databaseUrl+"&search_path=sensors", true)
 	dbErr := storage.Connect(ctx)
 	if dbErr != nil {
+		fmt.Printf("Connection error: %s\n", dbErr)
 		return
 	}
 	defer storage.Close()
 	defer storage.Cleanup(ctx)
 
 	os.Exit(m.Run())
+}
+
+func startPostgreSqlContainer(ctx context.Context) (string, testcontainers.Container) {
+	var env = map[string]string{
+		"POSTGRES_PASSWORD": DbPass,
+		"POSTGRES_USER":     DbUser,
+		"POSTGRES_DB":       DbName,
+	}
+	var port = "5432/tcp"
+
+	req := testcontainers.GenericContainerRequest{
+		ContainerRequest: testcontainers.ContainerRequest{
+			Image:        "postgres:alpine",
+			ExposedPorts: []string{port},
+			Env:          env,
+			WaitingFor:   wait.ForLog("database system is ready to accept connections"),
+		},
+		Started: true,
+	}
+	container, err := testcontainers.GenericContainer(ctx, req)
+	if err != nil {
+		fmt.Printf("failed to start container: %v", err)
+		return "", nil
+	}
+
+	p, err := container.MappedPort(ctx, "5432")
+	if err != nil {
+		fmt.Printf("failed to get container external port: %v", err)
+		return "", nil
+	}
+
+	log.Println("PostgreSQL container is ready and running at port: ", p.Port())
+	time.Sleep(time.Second)
+
+	databaseUrl := fmt.Sprintf(DbUrl, p.Port())
+	return databaseUrl, container
 }
 
 func Test_StoreMeasurement(t *testing.T) {

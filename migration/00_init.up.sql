@@ -10,10 +10,11 @@ CREATE TABLE measurement
     sensor_id       INT              NOT NULL,
     total_count     BIGINT           NOT NULL,
     total_sum       DOUBLE PRECISION NOT NULL,
-    agv_value       DOUBLE PRECISION NOT NULL,
+    avg_value       DOUBLE PRECISION NOT NULL,
     min_value       DOUBLE PRECISION NOT NULL,
     max_value       DOUBLE PRECISION NOT NULL
 );
 
 CREATE UNIQUE INDEX idx_measurement
-    ON measurement (measurement_day, sensor_id) INCLUDE (total_count, total_sum, agv_value, min_value, max_value);
+    ON measurement (measurement_day, sensor_id)
+    INCLUDE (total_count, total_sum, avg_value, min_value, max_value);

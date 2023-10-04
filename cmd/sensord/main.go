@@ -11,13 +11,8 @@ import (
 	"sensord/internal/sensor_api"
 )
 
+// main start the sensord
 func main() {
-	if err := run(); err != nil {
-		log.Fatal(err)
-	}
-}
-
-func run() error {
 	// Listen to interrupt signal Ctrl+C
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	// Load config from envs
@@ -44,5 +39,4 @@ func run() error {
 	log.Println("INFO: Gracefully shutting down")
 	stop()
 	storage.Close()
-	return nil
 }

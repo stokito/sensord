@@ -72,6 +72,9 @@ The sensord has a Dockerfile and you can build an image with:
 
 The Dockerfile uses two stage build.
 
+## Testing
+Most logic is on the DB layer so see the db_pg_test.go
+The test will start a PostgreSQL server in a docker container.
 
 ## API endpoints
 The API is separated into two parts:
@@ -93,8 +96,8 @@ Since the Sensor API has a big load it's based on FastHttp.
 curl -X POST --location "http://localhost:8080/api/v1/measurement" \
 -H "Content-Type: application/json" \
 -d "{
-\"sensorId\": 0,
+\"sensorId\": 1,
 \"time\": \"2023-01-02T00:00:00.000Z\",
-\"value\": 0
+\"value\": 42
 }"
 ```

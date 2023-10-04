@@ -83,12 +83,12 @@ func (s *SensorApiServer) handleApiRequest(reqCtx *fasthttp.RequestCtx) {
 }
 
 func (s *SensorApiServer) parseAndStore(body []byte) error {
+	ctx := context.Background()
 	measurement := &models.MeasurementDto{}
 	err := json.Unmarshal(body, measurement)
 	if err != nil {
 		return err
 	}
-	ctx := context.Background()
 	s.storage.StoreMeasurement(ctx, measurement.Time, measurement.SensorId, measurement.Value)
 
 	return nil

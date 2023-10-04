@@ -3,17 +3,55 @@ POST http://localhost:8080/api/v1/measurement
 Content-Type: application/json
 
 {
-  "sensorId": 0,
-  "time": "2023-01-02T00:00:00.000Z",
-  "value": 0
+  "sensorId": 1,
+  "time": "2023-01-01T00:00:00.000Z",
+  "value": 42
 }
+
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 204, "Response status is not 204");
+    });
+%}
 
 
 ### Total
 GET http://localhost:9090/api/v1/stats/Total
 
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 204");
+    });
+    client.test("Response content-type is json", function() {
+        var type = response.contentType.mimeType;
+        client.assert(type === "application/json", "Expected 'application/json;charset=utf-8' but received '" + type + "'");
+    });
+%}
+
+
 ### EachSensor
 GET http://localhost:9090/api/v1/stats/EachSensor
 
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 204");
+    });
+    client.test("Response content-type is json", function() {
+        var type = response.contentType.mimeType;
+        client.assert(type === "application/json", "Expected 'application/json;charset=utf-8' but received '" + type + "'");
+    });
+%}
+
 ### EachSensorAndDay
 GET http://localhost:9090/api/v1/stats/EachSensorAndDay
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 204");
+    });
+    client.test("Response content-type is json", function() {
+        var type = response.contentType.mimeType;
+        client.assert(type === "application/json", "Expected 'application/json;charset=utf-8' but received '" + type + "'");
+    });
+%}

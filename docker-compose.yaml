@@ -17,7 +17,7 @@ services:
       - '5432:5432'
     volumes:
 #      - db:/var/lib/postgresql/data # uncomment this if you want to persist data on a volume
-      - ./migration/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./migration/00_init.up.sql:/docker-entrypoint-initdb.d/init.sql
   sensord:
     build: .
     depends_on:

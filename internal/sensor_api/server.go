@@ -11,19 +11,20 @@ import (
 	"sensord/internal/models"
 )
 
-type ApiServer struct {
+// SensorApiServer Collects measurements from sensors
+type SensorApiServer struct {
 	storage    db.SensorsDb
 	listenAddr string
 }
 
-func NewSensorApiServer(ListenAddr string, storage db.SensorsDb) *ApiServer {
-	return &ApiServer{
+func NewSensorApiServer(ListenAddr string, storage db.SensorsDb) *SensorApiServer {
+	return &SensorApiServer{
 		listenAddr: ListenAddr,
 		storage:    storage,
 	}
 }
 
-func (s *ApiServer) Start() {
+func (s *SensorApiServer) Start() {
 	log.Printf("NOTICE: Start sensord API server on %s\n", s.listenAddr)
 	apiServerHttp := &fasthttp.Server{
 		Handler:                       s.handleApiRequest,
@@ -41,7 +42,7 @@ func (s *ApiServer) Start() {
 
 var apiEndpoint = []byte("/api/v1/measurement")
 
-func (s *ApiServer) handleApiRequest(reqCtx *fasthttp.RequestCtx) {
+func (s *SensorApiServer) handleApiRequest(reqCtx *fasthttp.RequestCtx) {
 	// catch panic
 	defer func() {
 		panicErr := recover()
@@ -54,12 +55,21 @@ func (s *ApiServer) handleApiRequest(reqCtx *fasthttp.RequestCtx) {
 	uri := reqCtx.Request.URI()
 	path := uri.Path()
 
+	// if path is /api/v1/measurement
 	if bytes.Equal(path, apiEndpoint) {
+		// only POST is allowed
 		if !reqCtx.IsPost() {
 			reqCtx.Response.SetStatusCode(http.StatusMethodNotAllowed)
 			return
 		}
-		err := s.parseAndStore(reqCtx.Request.Body())
+		// Get the request body
+		body, err := reqCtx.Request.BodyUncompressed()
+		if err != nil {
+			reqCtx.Response.SetStatusCode(http.StatusUnprocessableEntity)
+			return
+		}
+		// parse the JSON and save
+		err = s.parseAndStore(body)
 		if err != nil {
 			reqCtx.Response.SetStatusCode(http.StatusBadRequest)
 			return
@@ -68,11 +78,11 @@ func (s *ApiServer) handleApiRequest(reqCtx *fasthttp.RequestCtx) {
 		reqCtx.Response.SetStatusCode(http.StatusNoContent)
 		return
 	}
-	// unknown URL path
+	// 404 for the unknown URL path
 	reqCtx.Response.SetStatusCode(http.StatusNotFound)
 }
 
-func (s *ApiServer) parseAndStore(body []byte) error {
+func (s *SensorApiServer) parseAndStore(body []byte) error {
 	measurement := &models.MeasurementDto{}
 	err := json.Unmarshal(body, measurement)
 	if err != nil {

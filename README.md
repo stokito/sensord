@@ -45,28 +45,6 @@ Database has a table `measurement` that collects measurements stats in aggregate
 The stats records are updated with upsert for a pair of day and sensor.
 The default PostgreSQL read-committed isolation level allows to safely parallel update records.
 
-
-The API is separated into two parts:
-* Sensor API for sensors
-   * `POST http://localhost:8080/api/v1/measurement` receives a JSON with measurements.
-* Admin API for Yochbad so she can watch reports
-   * `GET http://localhost:9090/api/v1/stats/Total`
-   * `GET http://localhost:9090/api/v1/stats/EachSensor`
-   * `GET http://localhost:9090/api/v1/stats/EachSensorAndDay`
-
-Having this two API separated allows to secure them with different way.
-For example the Sensor API may use plain HTTP and have no authorization.
-Or use mutual TLS between the sensor and sensord.
-But the Admin API may use TLS, Basic Auth and be accessible only from specific IP.
-
-Since the Sensor API has a big load it's based on FastHttp.
-
-The sensord has a Dockerfile and you can build an image with:
-
-    docker build -t sensord .
-
-The Dockerfile uses two stage build.
-
 ## Configuration
 
 You need to configure environment variables:
@@ -74,6 +52,8 @@ You need to configure environment variables:
 * `ADMIN_LISTEN_HTTP` Admin HTTP API listen address
 * `DB_URL` PostgreSQL database URL. E.g. `postgres://postgres:postgres@localhost:5432/sensorsdb?sslmode=disable&search_path=sensors`
 * `DB_LOG` if `true` then log SQL queries and args. Useful for testing and debug.
+
+See the .env file with example for a local running.
 
 ## Running
 
@@ -84,3 +64,37 @@ This will start locally a PostgreSQL, create a DB and start the sensord API.
 You can build manually the sensord with:
 
    go build -o /build/sensord ./cmd/sensord/main.go
+
+
+The sensord has a Dockerfile and you can build an image with:
+
+    docker build -t sensord .
+
+The Dockerfile uses two stage build.
+
+
+## API endpoints
+The API is separated into two parts:
+* Sensor API for sensors
+    * `POST http://localhost:8080/api/v1/measurement` receives a JSON with measurements.
+* Admin API for Yochbad so she can watch reports
+    * `GET http://localhost:9090/api/v1/stats/Total` aggregated data for last week for all sensors.
+    * `GET http://localhost:9090/api/v1/stats/EachSensor` report by each sensor for last week e.g. today's midnight minus 7 days.
+    * `GET http://localhost:9090/api/v1/stats/EachSensorAndDay` report grouped by each sensor and a day.
+
+Having this two API separated allows to secure them with different way.
+For example the Sensor API may use plain HTTP and have no authorization.
+Or use mutual TLS between the sensor and sensord.
+But the Admin API may use TLS, Basic Auth and be accessible only from specific IP.
+
+Since the Sensor API has a big load it's based on FastHttp.
+
+```sh
+curl -X POST --location "http://localhost:8080/api/v1/measurement" \
+-H "Content-Type: application/json" \
+-d "{
+\"sensorId\": 0,
+\"time\": \"2023-01-02T00:00:00.000Z\",
+\"value\": 0
+}"
+```

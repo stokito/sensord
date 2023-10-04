@@ -20,7 +20,7 @@ func main() {
 func run() error {
 	// Listen to interrupt signal Ctrl+C
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
-
+	// Load config from envs
 	conf := core.LoadConfig()
 
 	log.Printf("INFO: Running Sensor Daemon on %s\n", conf.SensorApiListenHttp)
@@ -32,12 +32,14 @@ func run() error {
 	}
 	defer storage.Close()
 
+	// start Sensor API server endpoints
 	sensorApiServ := sensor_api.NewSensorApiServer(conf.SensorApiListenHttp, storage)
 	go sensorApiServ.Start()
-
+	// start Admin API server endpoints
 	adminApiServ := admin_api.NewAdminApiServer(conf.AdminApiListenHttp, storage)
 	go adminApiServ.Start()
 
+	// Wait until the main context is canceled by Ctrl+C
 	<-ctx.Done()
 	log.Println("INFO: Gracefully shutting down")
 	stop()

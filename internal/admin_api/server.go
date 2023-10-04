@@ -9,6 +9,7 @@ import (
 	"time"
 )
 
+// AdminApiServer Admin HTTP API: reporting endpoints
 type AdminApiServer struct {
 	storage    db.SensorsDb
 	listenAddr string

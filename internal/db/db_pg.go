@@ -12,14 +12,13 @@ import (
 // language=PostgreSQL
 var sqlMeasurementInsert = `
 INSERT INTO measurement (
-	period_start, sensor_id, total_count, total_sum, agv_value, min_value, max_value) 
-VALUES ($1, $2, $3)
-ON CONFLICT (period_start, sensor_id) DO NOTHING;
+	measurement_day, sensor_id, total_count, total_sum, avg_value, min_value, max_value) 
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+ON CONFLICT (measurement_day, sensor_id) DO NOTHING;
 `
 
 // language=PostgreSQL
-var sqlCleanup = `TRUNCATE measurement;
-`
+var sqlCleanup = `TRUNCATE measurement`
 
 // DbLog logger for SQL queries
 type DbLog struct {

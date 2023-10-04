@@ -6,6 +6,7 @@ import (
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/pkg/errors"
 	"log"
+	"sensord/internal/models"
 	"time"
 )
 
@@ -92,14 +93,14 @@ WHERE measurement.measurement_day = $1 AND measurement.sensor_id = $2
 
 // GetMeasurementStatsForDay returns a stats for a day.
 // If no any measurements exists for the day then all counters will be zero.
-func (db *PostgresDb) GetMeasurementStatsForDay(ctx context.Context, day time.Time, sensorId int) (*MeasurementRec, error) {
+func (db *PostgresDb) GetMeasurementStatsForDay(ctx context.Context, day time.Time, sensorId int) (*models.MeasurementRec, error) {
 	row := db.pool.QueryRow(ctx, `
 SELECT total_count, total_sum, avg_value, min_value, max_value
 FROM measurement
 WHERE measurement_day = $1 AND sensor_id = $2`,
 		day, sensorId)
 
-	measurement := &MeasurementRec{}
+	measurement := &models.MeasurementRec{}
 	sqlErr := row.Scan(&measurement.TotalCount, &measurement.TotalSum,
 		&measurement.AvgValue, &measurement.MinValue, &measurement.MaxValue)
 	if sqlErr == pgx.ErrNoRows {
@@ -113,7 +114,7 @@ WHERE measurement_day = $1 AND sensor_id = $2`,
 
 // GetMeasurementPeriodStatsTotal returns a stats for a period e.g. day, week.
 // If no any measurements exists for the day then all counters will be zero.
-func (db *PostgresDb) GetMeasurementPeriodStatsTotal(ctx context.Context, periodStart, periodEnd time.Time) (*MeasurementRec, error) {
+func (db *PostgresDb) GetMeasurementPeriodStatsTotal(ctx context.Context, periodStart, periodEnd time.Time) (*models.MeasurementRec, error) {
 	row := db.pool.QueryRow(ctx, `
 SELECT
 	SUM(total_count) AS total_count,
@@ -127,7 +128,7 @@ HAVING COUNT(*) > 0 -- remove records with all NULL
 `,
 		periodStart, periodEnd)
 
-	measurement := &MeasurementRec{
+	measurement := &models.MeasurementRec{
 		PeriodStart: periodStart,
 		PeriodEnd:   periodEnd,
 		SensorId:    0,
@@ -147,8 +148,8 @@ HAVING COUNT(*) > 0 -- remove records with all NULL
 
 // GetMeasurementPeriodStatsForEachSensor returns a stats for a period e.g. day, week.
 // If no any measurements exists for the day then all counters will be zero.
-func (db *PostgresDb) GetMeasurementPeriodStatsForEachSensor(ctx context.Context, periodStart, periodEnd time.Time) ([]*MeasurementRec, error) {
-	stats := []*MeasurementRec{}
+func (db *PostgresDb) GetMeasurementPeriodStatsForEachSensor(ctx context.Context, periodStart, periodEnd time.Time) ([]*models.MeasurementRec, error) {
+	stats := []*models.MeasurementRec{}
 
 	rows, sqlErr := db.pool.Query(ctx, `
 SELECT
@@ -171,7 +172,7 @@ ORDER BY sensor_id
 	defer rows.Close()
 
 	for rows.Next() {
-		measurement := &MeasurementRec{
+		measurement := &models.MeasurementRec{
 			PeriodStart: periodStart,
 			PeriodEnd:   periodEnd,
 		}
@@ -188,8 +189,8 @@ ORDER BY sensor_id
 
 // GetMeasurementPeriodStatsForEachSensorAndDay returns a stats for a period e.g. day, week.
 // If no any measurements exists for the day then all counters will be zero.
-func (db *PostgresDb) GetMeasurementPeriodStatsForEachSensorAndDay(ctx context.Context, periodStart, periodEnd time.Time) ([]*MeasurementRec, error) {
-	stats := []*MeasurementRec{}
+func (db *PostgresDb) GetMeasurementPeriodStatsForEachSensorAndDay(ctx context.Context, periodStart, periodEnd time.Time) ([]*models.MeasurementRec, error) {
+	stats := []*models.MeasurementRec{}
 
 	rows, sqlErr := db.pool.Query(ctx, `
 SELECT
@@ -213,7 +214,7 @@ ORDER BY sensor_id, measurement_day
 	defer rows.Close()
 
 	for rows.Next() {
-		measurement := &MeasurementRec{}
+		measurement := &models.MeasurementRec{}
 		scanErr := rows.Scan(&measurement.SensorId, &measurement.PeriodStart, &measurement.TotalCount, &measurement.TotalSum,
 			&measurement.AvgValue, &measurement.MinValue, &measurement.MaxValue)
 		if scanErr != nil {

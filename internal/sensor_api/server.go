@@ -73,7 +73,6 @@ func (s *ApiServer) handleApiRequest(reqCtx *fasthttp.RequestCtx) {
 }
 
 func (s *ApiServer) parseAndStore(body []byte) error {
-	log.Printf("%s", body)
 	measurement := &models.MeasurementDto{}
 	err := json.Unmarshal(body, measurement)
 	if err != nil {

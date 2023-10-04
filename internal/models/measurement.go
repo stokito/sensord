@@ -1,7 +1,8 @@
-package db
+package models
 
 import "time"
 
+// MeasurementRec used in stats reporting
 type MeasurementRec struct {
 	PeriodStart time.Time
 	PeriodEnd   time.Time

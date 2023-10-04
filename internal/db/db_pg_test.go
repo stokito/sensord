@@ -5,6 +5,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"os"
 	"sensord/internal/core"
+	"sensord/internal/models"
 	"sync"
 	"testing"
 	"time"
@@ -43,14 +44,14 @@ func Test_StoreMeasurement(t *testing.T) {
 	// check that for the day we don't have any measurements
 	measurement, sqlErr := storage.GetMeasurementStatsForDay(ctx, day1, 1)
 	assert.NoError(t, sqlErr)
-	expected := &MeasurementRec{}
+	expected := &models.MeasurementRec{}
 	assert.Equal(t, expected, measurement)
 
 	// Insert the first record for a day
 	storage.StoreMeasurement(ctx, day1, 1, 1.0)
 	measurement, sqlErr = storage.GetMeasurementStatsForDay(ctx, day1, 1)
 	assert.NoError(t, sqlErr)
-	expected = &MeasurementRec{
+	expected = &models.MeasurementRec{
 		TotalCount: 1,
 		TotalSum:   1,
 		AvgValue:   1,
@@ -64,7 +65,7 @@ func Test_StoreMeasurement(t *testing.T) {
 	storage.StoreMeasurement(ctx, day2, 1, 4.0)
 	measurement, sqlErr = storage.GetMeasurementStatsForDay(ctx, day1, 1)
 	assert.NoError(t, sqlErr)
-	expected = &MeasurementRec{
+	expected = &models.MeasurementRec{
 		TotalCount: 3,
 		TotalSum:   6,
 		AvgValue:   2,
@@ -90,7 +91,7 @@ func Test_StoreMeasurement_Parallel(t *testing.T) {
 	wg.Wait()
 	measurement, sqlErr := storage.GetMeasurementStatsForDay(ctx, day3, 1)
 	assert.NoError(t, sqlErr)
-	expected := &MeasurementRec{
+	expected := &models.MeasurementRec{
 		TotalCount: 100,
 		TotalSum:   100,
 		AvgValue:   1,
@@ -114,7 +115,7 @@ func Test_GetMeasurementPeriodStatsTotal(t *testing.T) {
 
 	stats, sqlErr := storage.GetMeasurementPeriodStatsTotal(ctx, day1, day7)
 	assert.NoError(t, sqlErr)
-	expected := &MeasurementRec{
+	expected := &models.MeasurementRec{
 		PeriodStart: day1,
 		PeriodEnd:   day7,
 		SensorId:    0,
@@ -141,7 +142,7 @@ func Test_GetMeasurementPeriodStatsForEachSensor(t *testing.T) {
 
 	stats, sqlErr := storage.GetMeasurementPeriodStatsForEachSensor(ctx, day1, day7)
 	assert.NoError(t, sqlErr)
-	expected := []*MeasurementRec{
+	expected := []*models.MeasurementRec{
 		{
 			PeriodStart: day1,
 			PeriodEnd:   day7,
@@ -181,7 +182,7 @@ func Test_GetMeasurementPeriodStatsForEachSensorAndDay(t *testing.T) {
 
 	stats, sqlErr := storage.GetMeasurementPeriodStatsForEachSensorAndDay(ctx, day1, day7)
 	assert.NoError(t, sqlErr)
-	expected := []*MeasurementRec{
+	expected := []*models.MeasurementRec{
 		{
 			PeriodStart: day1,
 			PeriodEnd:   day2,

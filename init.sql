@@ -1,6 +1,7 @@
 CREATE SCHEMA sensors;
 
-SET search_path TO sensors;
+SET
+search_path TO sensors;
 
 CREATE TABLE sensors
 (
@@ -11,14 +12,17 @@ CREATE TABLE sensors
     props JSONB
 );
 
-
-CREATE TABLE measurements
+-- период, сумма_всех_показаний, количество_показаний, среднее, минимальное, максимальное
+CREATE TABLE measurement
 (
-    measure_time TIMESTAMP NOT NULL,
-    sensor_id    INT       NOT NULL REFERENCES sensors(id),
-    value        DOUBLE PRECISION
+    measure_start TIMESTAMP        NOT NULL,
+    sensor_id     INT              NOT NULL REFERENCES sensors (id),
+    total_count   BIGINT           NOT NULL,
+    total_sum     DOUBLE PRECISION NOT NULL,
+    agv_sum       DOUBLE PRECISION NOT NULL,
+    min_value     DOUBLE PRECISION NOT NULL,
+    max_value     DOUBLE PRECISION NOT NULL
 );
 
-CREATE UNIQUE INDEX idx_measurements
-    ON measurements (measure_time, sensor_id)
-    INCLUDE (value);
+CREATE UNIQUE INDEX idx_measurement
+    ON measurement (measure_start, sensor_id) INCLUDE (total_count, total_sum, agv_sum, min_value, max_value);

@@ -12,9 +12,9 @@ import (
 // language=PostgreSQL
 var sqlMeasurementInsert = `
 INSERT INTO measurement (
-	measure_time, sensor_id, value) 
+	measure_start, sensor_id, max_value) 
 VALUES ($1, $2, $3)
-ON CONFLICT (measure_time, sensor_id) DO NOTHING;
+ON CONFLICT (measure_start, sensor_id) DO NOTHING;
 `
 
 // language=PostgreSQL

@@ -9,17 +9,6 @@ import (
 	"time"
 )
 
-// language=PostgreSQL
-var sqlMeasurementInsert = `
-INSERT INTO measurement (
-	measurement_day, sensor_id, total_count, total_sum, avg_value, min_value, max_value) 
-VALUES ($1, $2, $3, $4, $5, $6, $7)
-ON CONFLICT (measurement_day, sensor_id) DO NOTHING;
-`
-
-// language=PostgreSQL
-var sqlCleanup = `TRUNCATE measurement`
-
 // DbLog logger for SQL queries
 type DbLog struct {
 }
@@ -70,19 +59,56 @@ func (db *PostgresDb) Close() {
 	log.Printf("INFO: DB disconnected\n")
 }
 
-func (db *PostgresDb) StoreMeasurement(ctx context.Context, measureTime time.Time, sensorId int, value float64) {
-	_, sqlErr := db.pool.Exec(ctx, sqlMeasurementInsert,
-		measureTime, sensorId, value)
+// Cleanup DB e.g. remove sensors and all their measurements.
+// Useful for testing
+func (db *PostgresDb) Cleanup(ctx context.Context) {
+	_, sqlErr := db.pool.Exec(ctx, `TRUNCATE measurement`)
+	if sqlErr != nil {
+		log.Printf("WARN: Fail to cleanup %v\n", sqlErr)
+	}
+}
+
+// StoreMeasurement Saves the measurement for a day.
+// The value is stored in aggregated form for the day.
+// Total count, sum, min, max, avg values are updated.
+func (db *PostgresDb) StoreMeasurement(ctx context.Context, day time.Time, sensorId int, value float64) {
+	_, sqlErr := db.pool.Exec(ctx, `
+INSERT INTO measurement (
+	measurement_day, sensor_id, total_count, total_sum, avg_value, min_value, max_value) 
+VALUES ($1, $2, 1, $3, $3, $3, $3)
+ON CONFLICT (measurement_day, sensor_id) DO
+UPDATE SET total_sum = measurement.total_sum + $3,
+total_count = measurement.total_count + 1,
+avg_value = (measurement.total_sum + $3) / (measurement.total_count + 1),
+min_value = LEAST(measurement.min_value, $3),
+max_value = GREATEST(measurement.max_value, $3)
+WHERE measurement.measurement_day = $1 AND measurement.sensor_id = $2
+`,
+		day, sensorId, value)
 	if sqlErr != nil {
 		log.Printf("WARN: Fail to insert measure %v\n", sqlErr)
 	}
 }
 
-// Cleanup DB e.g. remove sensors and all their measurements.
-// Used for testing
-func (db *PostgresDb) Cleanup(ctx context.Context) {
-	_, sqlErr := db.pool.Exec(ctx, sqlCleanup)
-	if sqlErr != nil {
-		log.Printf("WARN: Fail to cleanup %v\n", sqlErr)
+// GetMeasurementStatsForDay returns a stats for a day.
+// If no any measurements exists for the day then all counters will be zero.
+func (db *PostgresDb) GetMeasurementStatsForDay(ctx context.Context, day time.Time, sensorId int) (*MeasurementRec, error) {
+	row := db.pool.QueryRow(ctx, `
+SELECT measurement_day, sensor_id, total_count, total_sum, avg_value, min_value, max_value
+FROM measurement
+WHERE measurement_day = $1 AND sensor_id = $2`,
+		day, sensorId)
+
+	measurement := &MeasurementRec{}
+	sqlErr := row.Scan(&measurement.Day, &measurement.SensorId, &measurement.TotalCount, &measurement.TotalSum,
+		&measurement.AvgValue, &measurement.MinValue, &measurement.MaxValue)
+	if sqlErr == pgx.ErrNoRows {
+		measurement.Day = day
+		measurement.SensorId = sensorId
+		return measurement, nil
 	}
+	if sqlErr != nil {
+		return nil, sqlErr
+	}
+	return measurement, nil
 }

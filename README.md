@@ -92,6 +92,7 @@ But the Admin API may use TLS, Basic Auth and be accessible only from specific I
 
 Since the Sensor API has a big load it's based on FastHttp.
 
+You can call the API with curl like:
 ```sh
 curl -X POST --location "http://localhost:8080/api/v1/measurement" \
 -H "Content-Type: application/json" \
@@ -101,3 +102,5 @@ curl -X POST --location "http://localhost:8080/api/v1/measurement" \
 \"value\": 42
 }"
 ```
+
+In the GoLand you can use samples from the requests.http file.

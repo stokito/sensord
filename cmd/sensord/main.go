@@ -5,7 +5,8 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"sensord/internal/config"
+	"sensord/internal/api"
+	"sensord/internal/core"
 	"sensord/internal/db"
 )
 
@@ -19,20 +20,23 @@ func run() error {
 	// Listen to interrupt signal Ctrl+C
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 
-	config.LoadConfig()
+	conf := core.LoadConfig()
 
-	log.Printf("INFO: Running Sensor Daemon on %s\n", config.Conf.ApiListenHttp)
+	log.Printf("INFO: Running Sensor Daemon on %s\n", conf.ApiListenHttp)
 
-	dbConn := db.NewPostgresDb(config.Conf.DatabaseUrl, config.Conf.DatabaseLog)
-	dbErr := dbConn.Connect(ctx)
+	storage := db.NewPostgresDb(conf.DatabaseUrl, conf.DatabaseLog)
+	dbErr := storage.Connect(ctx)
 	if dbErr != nil {
 		log.Fatal("CRIT: Unable to connect to database: " + dbErr.Error())
 	}
-	defer dbConn.Close()
+	defer storage.Close()
+
+	apiServ := api.NewApiServer(conf.ApiListenHttp, storage)
+	go apiServ.Start()
 
 	<-ctx.Done()
 	log.Println("INFO: Gracefully shutting down")
 	stop()
-	dbConn.Close()
+	storage.Close()
 	return nil
 }

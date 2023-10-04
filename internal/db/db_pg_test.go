@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/stretchr/testify/assert"
 	"os"
-	"sensord/internal/config"
+	"sensord/internal/core"
 	"sync"
 	"testing"
 	"time"
@@ -19,36 +19,36 @@ var day7 = time.Date(2023, 1, 7, 0, 0, 0, 0, utc)
 // next week
 var day8 = time.Date(2023, 1, 8, 0, 0, 0, 0, utc)
 
-var dbConn SensorsDb
+var storage SensorsDb
 
 func TestMain(m *testing.M) {
 	ctx := context.Background()
-	config.LoadConfig()
+	conf := core.LoadConfig()
 
-	postgresDb := NewPostgresDb(config.Conf.DatabaseUrl, config.Conf.DatabaseLog)
-	dbConn = postgresDb
-	dbErr := dbConn.Connect(ctx)
+	storage = NewPostgresDb(conf.DatabaseUrl, conf.DatabaseLog)
+	//dbConn = postgresDb
+	dbErr := storage.Connect(ctx)
 	if dbErr != nil {
 		return
 	}
-	defer dbConn.Close()
-	defer dbConn.Cleanup(ctx)
+	defer storage.Close()
+	defer storage.Cleanup(ctx)
 
 	os.Exit(m.Run())
 }
 
 func Test_StoreMeasurement(t *testing.T) {
 	ctx := context.Background()
-	dbConn.Cleanup(ctx)
+	storage.Cleanup(ctx)
 	// check that for the day we don't have any measurements
-	measurement, sqlErr := dbConn.GetMeasurementStatsForDay(ctx, day1, 1)
+	measurement, sqlErr := storage.GetMeasurementStatsForDay(ctx, day1, 1)
 	assert.NoError(t, sqlErr)
 	expected := &MeasurementRec{}
 	assert.Equal(t, expected, measurement)
 
 	// Insert the first record for a day
-	dbConn.StoreMeasurement(ctx, day1, 1, 1.0)
-	measurement, sqlErr = dbConn.GetMeasurementStatsForDay(ctx, day1, 1)
+	storage.StoreMeasurement(ctx, day1, 1, 1.0)
+	measurement, sqlErr = storage.GetMeasurementStatsForDay(ctx, day1, 1)
 	assert.NoError(t, sqlErr)
 	expected = &MeasurementRec{
 		TotalCount: 1,
@@ -58,11 +58,11 @@ func Test_StoreMeasurement(t *testing.T) {
 		MaxValue:   1,
 	}
 	assert.Equal(t, expected, measurement)
-	dbConn.StoreMeasurement(ctx, day1, 1, 2.0)
-	dbConn.StoreMeasurement(ctx, day1, 1, 3.0)
+	storage.StoreMeasurement(ctx, day1, 1, 2.0)
+	storage.StoreMeasurement(ctx, day1, 1, 3.0)
 	// add a record for tomorrow
-	dbConn.StoreMeasurement(ctx, day2, 1, 4.0)
-	measurement, sqlErr = dbConn.GetMeasurementStatsForDay(ctx, day1, 1)
+	storage.StoreMeasurement(ctx, day2, 1, 4.0)
+	measurement, sqlErr = storage.GetMeasurementStatsForDay(ctx, day1, 1)
 	assert.NoError(t, sqlErr)
 	expected = &MeasurementRec{
 		TotalCount: 3,
@@ -76,19 +76,19 @@ func Test_StoreMeasurement(t *testing.T) {
 
 func Test_StoreMeasurement_Parallel(t *testing.T) {
 	ctx := context.Background()
-	dbConn.Cleanup(ctx)
+	storage.Cleanup(ctx)
 	// Imitate crazy day with heavy load
 	wg := &sync.WaitGroup{}
 	for i := 0; i < 100; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			dbConn.StoreMeasurement(ctx, day3, 1, 1.0)
+			storage.StoreMeasurement(ctx, day3, 1, 1.0)
 		}()
 	}
 
 	wg.Wait()
-	measurement, sqlErr := dbConn.GetMeasurementStatsForDay(ctx, day3, 1)
+	measurement, sqlErr := storage.GetMeasurementStatsForDay(ctx, day3, 1)
 	assert.NoError(t, sqlErr)
 	expected := &MeasurementRec{
 		TotalCount: 100,
@@ -102,17 +102,17 @@ func Test_StoreMeasurement_Parallel(t *testing.T) {
 
 func Test_GetMeasurementPeriodStatsTotal(t *testing.T) {
 	ctx := context.Background()
-	dbConn.Cleanup(ctx)
-	dbConn.StoreMeasurement(ctx, day1, 1, 1.0)
-	dbConn.StoreMeasurement(ctx, day1, 2, 1.0)
+	storage.Cleanup(ctx)
+	storage.StoreMeasurement(ctx, day1, 1, 1.0)
+	storage.StoreMeasurement(ctx, day1, 2, 1.0)
 
-	dbConn.StoreMeasurement(ctx, day2, 1, 1.0)
-	dbConn.StoreMeasurement(ctx, day2, 2, 1.0)
+	storage.StoreMeasurement(ctx, day2, 1, 1.0)
+	storage.StoreMeasurement(ctx, day2, 2, 1.0)
 	// next week
-	dbConn.StoreMeasurement(ctx, day8, 1, 1.0)
-	dbConn.StoreMeasurement(ctx, day8, 2, 1.0)
+	storage.StoreMeasurement(ctx, day8, 1, 1.0)
+	storage.StoreMeasurement(ctx, day8, 2, 1.0)
 
-	stats, sqlErr := dbConn.GetMeasurementPeriodStatsTotal(ctx, day1, day7)
+	stats, sqlErr := storage.GetMeasurementPeriodStatsTotal(ctx, day1, day7)
 	assert.NoError(t, sqlErr)
 	expected := &MeasurementRec{
 		PeriodStart: day1,
@@ -129,17 +129,17 @@ func Test_GetMeasurementPeriodStatsTotal(t *testing.T) {
 
 func Test_GetMeasurementPeriodStatsForEachSensor(t *testing.T) {
 	ctx := context.Background()
-	dbConn.Cleanup(ctx)
-	dbConn.StoreMeasurement(ctx, day1, 1, 1.0)
-	dbConn.StoreMeasurement(ctx, day1, 2, 1.0)
+	storage.Cleanup(ctx)
+	storage.StoreMeasurement(ctx, day1, 1, 1.0)
+	storage.StoreMeasurement(ctx, day1, 2, 1.0)
 
-	dbConn.StoreMeasurement(ctx, day2, 1, 1.0)
-	dbConn.StoreMeasurement(ctx, day2, 2, 1.0)
+	storage.StoreMeasurement(ctx, day2, 1, 1.0)
+	storage.StoreMeasurement(ctx, day2, 2, 1.0)
 	// next week
-	dbConn.StoreMeasurement(ctx, day8, 1, 1.0)
-	dbConn.StoreMeasurement(ctx, day8, 2, 1.0)
+	storage.StoreMeasurement(ctx, day8, 1, 1.0)
+	storage.StoreMeasurement(ctx, day8, 2, 1.0)
 
-	stats, sqlErr := dbConn.GetMeasurementPeriodStatsForEachSensor(ctx, day1, day7)
+	stats, sqlErr := storage.GetMeasurementPeriodStatsForEachSensor(ctx, day1, day7)
 	assert.NoError(t, sqlErr)
 	expected := []*MeasurementRec{
 		{
@@ -169,17 +169,17 @@ func Test_GetMeasurementPeriodStatsForEachSensor(t *testing.T) {
 
 func Test_GetMeasurementPeriodStatsForEachSensorAndDay(t *testing.T) {
 	ctx := context.Background()
-	dbConn.Cleanup(ctx)
-	dbConn.StoreMeasurement(ctx, day1, 1, 1.0)
-	dbConn.StoreMeasurement(ctx, day1, 2, 1.0)
+	storage.Cleanup(ctx)
+	storage.StoreMeasurement(ctx, day1, 1, 1.0)
+	storage.StoreMeasurement(ctx, day1, 2, 1.0)
 
-	dbConn.StoreMeasurement(ctx, day2, 1, 1.0)
-	dbConn.StoreMeasurement(ctx, day2, 2, 1.0)
+	storage.StoreMeasurement(ctx, day2, 1, 1.0)
+	storage.StoreMeasurement(ctx, day2, 2, 1.0)
 	// next week
-	dbConn.StoreMeasurement(ctx, day8, 1, 1.0)
-	dbConn.StoreMeasurement(ctx, day8, 2, 1.0)
+	storage.StoreMeasurement(ctx, day8, 1, 1.0)
+	storage.StoreMeasurement(ctx, day8, 2, 1.0)
 
-	stats, sqlErr := dbConn.GetMeasurementPeriodStatsForEachSensorAndDay(ctx, day1, day7)
+	stats, sqlErr := storage.GetMeasurementPeriodStatsForEachSensorAndDay(ctx, day1, day7)
 	assert.NoError(t, sqlErr)
 	expected := []*MeasurementRec{
 		{

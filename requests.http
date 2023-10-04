@@ -1,0 +1,8 @@
+POST http://localhost:8080/api/v1/measurement
+Content-Type: application/json
+
+{
+  "sensorId": 0,
+  "time": "2023-01-01T00:00:00.000Z",
+  "value": 0
+}

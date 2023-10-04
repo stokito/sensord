@@ -1,4 +1,4 @@
-package config
+package core
 
 import "os"
 
@@ -9,14 +9,12 @@ type SensordConf struct {
 	DatabaseLog   bool
 }
 
-var Conf *SensordConf
-
-func LoadConfig() {
+func LoadConfig() *SensordConf {
 	// create config from envs
 	conf := &SensordConf{
 		ApiListenHttp: os.Getenv("LISTEN_HTTP"),
 		DatabaseUrl:   os.Getenv("DB_URL"),
 		DatabaseLog:   os.Getenv("DB_LOG") == "true",
 	}
-	Conf = conf
+	return conf
 }

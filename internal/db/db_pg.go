@@ -12,20 +12,13 @@ import (
 // language=PostgreSQL
 var sqlMeasurementInsert = `
 INSERT INTO measurement (
-	measure_start, sensor_id, max_value) 
+	period_start, sensor_id, total_count, total_sum, agv_value, min_value, max_value) 
 VALUES ($1, $2, $3)
-ON CONFLICT (measure_start, sensor_id) DO NOTHING;
+ON CONFLICT (period_start, sensor_id) DO NOTHING;
 `
 
 // language=PostgreSQL
-var sqlCreateSensor = `
-INSERT INTO sensors (
-	id, name, room) 
-VALUES ($1, $2, $3);
-`
-
-// language=PostgreSQL
-var sqlCleanup = `TRUNCATE sensors RESTART IDENTITY CASCADE;
+var sqlCleanup = `TRUNCATE measurement;
 `
 
 // DbLog logger for SQL queries
@@ -76,14 +69,6 @@ func (db *PostgresDb) Close() {
 	db.pool.Close()
 	db.pool = nil
 	log.Printf("INFO: DB disconnected\n")
-}
-
-func (db *PostgresDb) CreateSensor(ctx context.Context, sensorId int, name, room string) {
-	_, sqlErr := db.pool.Exec(ctx, sqlCreateSensor,
-		sensorId, name, room)
-	if sqlErr != nil {
-		log.Printf("WARN: Fail to insert new sensor %v\n", sqlErr)
-	}
 }
 
 func (db *PostgresDb) StoreMeasurement(ctx context.Context, measureTime time.Time, sensorId int, value float64) {

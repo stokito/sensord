@@ -20,7 +20,6 @@ func Test_Db(t *testing.T) {
 	}
 	defer dbConn.Close()
 
-	dbConn.CreateSensor(ctx, 1, "Sensor1", "Room1")
 	measureTime := time.Now()
 	sensorId := 1
 	measureValue := 42.0

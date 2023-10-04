@@ -7,9 +7,3 @@ type MeasurementRec struct {
 	SensorId    int       `db:"sensor_id"`
 	Value       float64   `db:"value"`
 }
-
-type SensorRec struct {
-	Id   int    `db:"id"`
-	Name string `db:"name"`
-	Room string `db:"room"`
-}

@@ -73,16 +73,18 @@ func (db *PostgresDb) Cleanup(ctx context.Context) {
 // The value is stored in aggregated form for the day.
 // Total count, sum, min, max, avg values are updated.
 func (db *PostgresDb) StoreMeasurement(ctx context.Context, day time.Time, sensorId int, value float64) {
+	// UPSERT that tries to insert a row for a specific day but if the record already exists it updates it instead.
+	// All the fields are updated in aggregated form: count incremented, average recalculated etc
 	_, sqlErr := db.pool.Exec(ctx, `
 INSERT INTO measurement (
 	measurement_day, sensor_id, total_count, total_sum, avg_value, min_value, max_value) 
 VALUES ($1, $2, 1, $3, $3, $3, $3)
 ON CONFLICT (measurement_day, sensor_id) DO
-UPDATE SET total_sum = measurement.total_sum + $3,
-total_count = measurement.total_count + 1,
-avg_value = (measurement.total_sum + $3) / (measurement.total_count + 1),
-min_value = LEAST(measurement.min_value, $3),
-max_value = GREATEST(measurement.max_value, $3)
+UPDATE SET total_sum = measurement.total_sum + $3, -- increase sum on the new measurement value
+total_count = measurement.total_count + 1, -- increment count
+avg_value = (measurement.total_sum + $3) / (measurement.total_count + 1), -- calculate a new average
+min_value = LEAST(measurement.min_value, $3), -- find minimal value
+max_value = GREATEST(measurement.max_value, $3) -- find maximal value
 WHERE measurement.measurement_day = $1 AND measurement.sensor_id = $2
 `,
 		day, sensorId, value)

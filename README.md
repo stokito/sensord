@@ -2,14 +2,11 @@
 
 ## Engineer assignment
 ### Intro
-1. Meet Yochbad, she would like to collect temperature samples from multiple sensors
-   spread across the `Hagag` building in order to check the temperature fluctuations in the
-   building.
-2. She has multiple sensors that send those measurements to a server, during the day
-   randomly.
-3. She wants to have the max, min and average temperature stored for each day, for each
-   sensor for the past week.
-4. In addition, she wants to have a min, max and avg metric for the past week for every
+1. We need to collect temperature samples from multiple sensors
+   spread across the building in order to check the temperature fluctuations in the building.
+2. The building has multiple sensors that send those measurements to a server, during the day randomly.
+3. We need to have the max, min and average temperature stored for each day, for each sensor for the past week.
+4. In addition, we need to have a min, max and avg metric for the past week for every
    sensor and for all sensors combined.
 
 ###  Description
